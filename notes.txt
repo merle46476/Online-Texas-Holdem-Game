@@ -1,0 +1,4 @@
+TODO
+
+1.prevent the user opening multiple tabs
+2.encrpt user's password stored in database

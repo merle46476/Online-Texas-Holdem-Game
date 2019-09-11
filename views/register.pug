@@ -1,0 +1,17 @@
+extends layout
+
+block content
+    h1 Register Page
+    p= message
+    form(method="post" action="/register")
+        div
+            lable Username:
+            input(type="text", name="username")
+        div
+            lable Password:
+            input(type="password", name="password")
+        div
+            lable Email:
+            input(type="text", name="email")
+        div
+            input(type="submit" value="Register")

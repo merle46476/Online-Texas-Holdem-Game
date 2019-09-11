@@ -1,0 +1,154 @@
+#!/usr/bin/env node
+
+/**
+ * Module dependencies.
+ */
+
+var app = require('../app');
+var debug = require('debug')('poker:server');
+var http = require('http');
+
+/**
+ * Get port from environment and store in Express.
+ */
+
+var port = normalizePort(process.env.PORT || '3000');
+app.set('port', port);
+
+/**
+ * Create HTTP server.
+ */
+
+var server = http.createServer(app);
+
+/**
+ * Listen on provided port, on all network interfaces.
+ */
+
+//--------------------------------------------------------
+//socket.io
+let io = require('socket.io')(server);
+let sessionStore = require('../app').sessionStore;
+let passportSocketIo = require('passport.socketio');
+let cookieParser = require('cookie-parser');
+let passport = require('../passport/conf');
+
+io.use(passportSocketIo.authorize({
+    cookieParser: cookieParser,       // the same middleware you registrer in express
+    key: 'connect.sid',       // the name of the cookie where express/connect stores its session_id
+    secret: 'keyboard cat',    // the session_secret to parse the cookie
+    store: sessionStore,        // we NEED to use a sessionstore. no memorystore please
+    success: onAuthorizeSuccess,  // *optional* callback on success - read more below
+    fail: onAuthorizeFail,     // *optional* callback on fail/error - read more below
+    passport: passport
+}));
+
+function onAuthorizeSuccess(data, accept){
+  console.log('successful connection to socket.io');
+
+  // The accept-callback still allows us to decide whether to
+  // accept the connection or not.
+  // If you use socket.io@1.X the callback looks different
+  accept();
+}
+
+function onAuthorizeFail(data, message, error, accept){
+  if(error)
+    throw new Error(message);
+  console.log('failed connection to socket.io:', message);
+
+  // If you use socket.io@1.X the callback looks different
+  // If you don't want to accept the connection
+  if(error)
+    accept(new Error(message));
+  // this error will be sent to the user as a special error-package
+  // see: http://socket.io/docs/client-api/#socket > error-object
+}
+
+const currentUsers = [];
+
+io.on('connection', (socket)=>{
+    const user = socket.request.user;
+    console.log(user);
+    //load the users that are online already
+    if (currentUsers.length !== 0){
+       socket.emit('load', currentUsers); 
+    }
+    currentUsers.push(user.username);
+    io.emit('online', user.username);
+
+    //if user disconnect
+    socket.on('disconnect', ()=>{
+        let index = currentUsers.indexOf(user.username);
+        if (index > -1){
+            currentUsers.splice(index,1);
+        }
+        io.emit('offline', user.username);
+    });
+});
+
+server.listen(port, ()=>{
+  console.log('listening on *:3000');
+});
+server.on('error', onError);
+server.on('listening', onListening);
+
+/**
+ * Normalize a port into a number, string, or false.
+ */
+
+function normalizePort(val) {
+  var port = parseInt(val, 10);
+
+  if (isNaN(port)) {
+    // named pipe
+    return val;
+  }
+
+  if (port >= 0) {
+    // port number
+    return port;
+  }
+
+  return false;
+}
+
+/**
+ * Event listener for HTTP server "error" event.
+ */
+
+function onError(error) {
+  if (error.syscall !== 'listen') {
+    throw error;
+  }
+
+  var bind = typeof port === 'string'
+    ? 'Pipe ' + port
+    : 'Port ' + port;
+
+  // handle specific listen errors with friendly messages
+  switch (error.code) {
+    case 'EACCES':
+      console.error(bind + ' requires elevated privileges');
+      process.exit(1);
+      break;
+    case 'EADDRINUSE':
+      console.error(bind + ' is already in use');
+      process.exit(1);
+      break;
+    default:
+      throw error;
+  }
+}
+
+/**
+ * Event listener for HTTP server "listening" event.
+ */
+
+function onListening() {
+  var addr = server.address();
+  var bind = typeof addr === 'string'
+    ? 'pipe ' + addr
+    : 'port ' + addr.port;
+  debug('Listening on ' + bind);
+}

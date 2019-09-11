@@ -1,0 +1,1 @@
+requirement:nodejs, mongoDB, redis

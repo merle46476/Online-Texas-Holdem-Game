@@ -1,0 +1,29 @@
+extend layout
+
+block content
+    h1 Game Page
+
+    div(name="current player")
+        p Current Online Users:
+        ul(id="players")
+    div
+        p Ready?
+        input(type="checkbox" id="ready")
+    div(name="hole cards")
+
+    div(name="preflop")
+
+    div(name="flop")
+
+    div(name="turn")
+
+    div(name="river")
+
+    div(name="actions")
+        button(name="check" class='test')
+        button(name="call" class='test')
+        button(name="bet/raise" class='test')
+        button(name="fold" class='test')
+
+    script(src='/socket.io/socket.io.js')
+    script(src='/javascripts/socket.js')
